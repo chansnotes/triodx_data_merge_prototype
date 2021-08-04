@@ -5,7 +5,7 @@ library(shiny)
 library(reshape2)
 library(xlsx)
 library(dplyr)
-library(tibble)
+#library(tibble)
 library(stringr)
 
 # Define server logic required to draw a histogram
