@@ -7,6 +7,7 @@ library(xlsx)
 library(dplyr)
 library(tibble)
 library(stringr)
+#library(openxlsx)
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
@@ -177,8 +178,24 @@ shinyServer(function(input, output) {
             paste("Result_", Sys.Date(), ".xlsx", sep="")
         },
         content=function(file){
-            write.xlsx(getData()$result,file, sheetName='Result', showNA = FALSE, row.names=FALSE, append = FALSE)
-            write.xlsx(getData()$qc,file, sheetName='DAILY QC', showNA = FALSE, row.names=FALSE,append = TRUE)
+            
+            wb <- createWorkbook()
+            addWorksheet(wb,sheetName='Result')
+            addWorksheet(wb,sheetName='DAILY QC')
+
+            redStyle <- createStyle(fontColour="#9C0006", bgFill="#FFC7CE")
+            yellowStyle <- createStyle(fontColour="#9C5700", bgFill="#FFEB9C")
+            
+            writeDataTable(wb,sheet='Result', x=getData()$result, keepNA=FALSE, rowNames=FALSE)
+            writeData(wb,sheet='DAILY QC', x=getData()$qc, keepNA=FALSE, rowNames=FALSE)
+            
+            conditionalFormatting(wb, sheet='Result', style=yellowStyle, cols=4:6, rows=1:(nrow(getData()$result)+1), rule="AND(D1<38, D1>0)" )
+            conditionalFormatting(wb, sheet='Result', style=redStyle, cols=7, rows=1:(nrow(getData()$result)+1), rule="AND(G1>=38, G1<=45)" )
+
+            saveWorkbook(wb, file=file, overwrite=TRUE)
+
+            #write.xlsx(getData()$result,file, sheetName='Result', showNA = FALSE, rowNames=FALSE, append = FALSE)
+            #write.xlsx(getData()$qc,file, sheetName='DAILY QC', showNA = FALSE, rowNames=FALSE,append = TRUE)
 
         }
     )
