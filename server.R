@@ -7,7 +7,7 @@ library(xlsx)
 library(dplyr)
 library(tibble)
 library(stringr)
-#library(openxlsx)
+library(openxlsx)
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
@@ -179,16 +179,48 @@ shinyServer(function(input, output) {
         },
         content=function(file){
             
+            retest <- data.frame('Index'=NA,'Barcode'=NA, 'Lab ID'=NA, 'E'=NA, 'N'=NA, 'RdRp'=NA, 'GAPDH'=NA, 'Interpretation'=NA, 'RNA Plate#'=NA, 'RNA Well#'=NA, 'Re-PCR Plate Well#'=NA, 'E'=NA, 'N'=NA, 'RdRp'=NA, 'GAPDH'=NA, 'Interpretation'=NA)
+            
             wb <- createWorkbook()
             addWorksheet(wb,sheetName='Result')
             addWorksheet(wb,sheetName='DAILY QC')
+            addWorksheet(wb,sheetName='RETEST')
 
             redStyle <- createStyle(fontColour="#9C0006", bgFill="#FFC7CE")
             yellowStyle <- createStyle(fontColour="#9C5700", bgFill="#FFEB9C")
+            mergedStyle <- createStyle(halign="center", fontSize = 18, textDecoration="bold")
+            mergedStyle2 <- createStyle(halign="center", textDecoration="bold")
+            lightBorder <- createStyle(border='TopBottomLeftRight', borderStyle='thin')
+            qcHeaderStyle <- createStyle(halign = "center",wrapText = TRUE,valign = "center", border='TopBottomLeftRight', borderStyle='thin', textDecoration="bold")
+            #headerBorder <- createStyle(border=c('top','left','right'), borderStyle='medium')
+            #headerBorder2 <- createStyle(border=c('bottom','left','right'), borderStyle='medium')
+            
+            #rightBorder <- createStyle(border='right', borderStyle = 'medium')
             
             writeDataTable(wb,sheet='Result', x=getData()$result, keepNA=FALSE, rowNames=FALSE)
-            writeData(wb,sheet='DAILY QC', x=getData()$qc, keepNA=FALSE, rowNames=FALSE)
             
+            writeData(wb, sheet='DAILY QC', 'Daily Quality Control', startCol = 1, startRow = 1, colNames = FALSE, rowNames = TRUE)
+            writeData(wb, sheet='DAILY QC','Non Template Control -Extraction', startCol = 6, startRow = 2, colNames = FALSE, rowNames = TRUE)
+            writeData(wb, sheet='DAILY QC','Non Template Control - RT-qPCR', startCol = 12, startRow = 2, colNames = FALSE, rowNames = TRUE)
+            writeData(wb, sheet='DAILY QC','Positive Control', startCol = 18, startRow = 2, colNames = FALSE, rowNames = TRUE)
+            
+            writeData(wb,sheet='DAILY QC', x=getData()$qc, headerStyle=qcHeaderStyle, borders='all', borderStyle = 'thin',  startRow=3, keepNA=FALSE, rowNames=FALSE)
+            writeData(wb, sheet='RETEST', x=retest, keepNA=FALSE, rowNames=FALSE)
+            
+            mergeCells(wb, sheet='DAILY QC', cols=1:length(getData()$qc), rows=1)
+            mergeCells(wb, sheet='DAILY QC', cols=1:5, rows=2)
+            mergeCells(wb, sheet='DAILY QC', cols=6:11, rows=2)
+            mergeCells(wb, sheet='DAILY QC', cols=12:17, rows=2)
+            mergeCells(wb, sheet='DAILY QC', cols=18:length(getData()$qc), rows=2)
+            addStyle(wb, sheet='DAILY QC', mergedStyle, rows=1, cols=1)
+            addStyle(wb, sheet='DAILY QC', mergedStyle2, rows=2, cols=6)
+            addStyle(wb, sheet='DAILY QC', mergedStyle2, rows=2, cols=12)
+            addStyle(wb, sheet='DAILY QC', mergedStyle2, rows=2, cols=18)
+            
+            #addStyle(wb, sheet='DAILY QC', rightBorder, rows=4:(nrow(getData()$qc)+3), cols=5)
+            
+            setColWidths(wb, sheet='DAILY QC', ignoreMergedCells = TRUE,cols = 5, widths = "auto")
+
             conditionalFormatting(wb, sheet='Result', style=yellowStyle, cols=4:6, rows=1:(nrow(getData()$result)+1), rule="AND(D1<38, D1>0)" )
             conditionalFormatting(wb, sheet='Result', style=redStyle, cols=7, rows=1:(nrow(getData()$result)+1), rule="AND(G1>=38, G1<=45)" )
 

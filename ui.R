@@ -8,6 +8,7 @@ library(reshape2)
 library(xlsx)
 library(tibble)
 library(stringr)
+library(openxlsx)
 
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
