@@ -5,7 +5,7 @@ library(shiny)
 library(reshape2)
 library(xlsx)
 library(dplyr)
-#library(tibble)
+library(tibble)
 library(stringr)
 
 # Define server logic required to draw a histogram
@@ -27,6 +27,9 @@ shinyServer(function(input, output) {
             # Declare an empty data frame for the result
             res = data.frame()
             qc = data.frame()
+            ntcExtQC <- c()
+            ntcPCRQC <- c()
+            pcQC <- c()
             
             for (i in 1:nfiles) {
                 # Find the Starting Index of the data using the Row Index of 'Sample Name'
@@ -57,7 +60,7 @@ shinyServer(function(input, output) {
                 # Add GAPDH CT value to result_df
                 gapData <- pcr_data[[i]] %>% filter(`Target Name` == 'GAPDH',ignore.case = TRUE)
                 gapData$`Ct Mean` <- round(as.numeric(gapData$`Ct Mean`),1)
-                gapData$`Ct Mean`[gapData$`Ct Mean` == 0] <- 'Undetermined'
+                gapData$`Ct Mean`[gapData$`Ct Mean` == 0] <- 45.0
                 #gapData <- gapData %>% select(-c('CT'))
                 #gapData$`CT` <- round(as.numeric(gapData$`CT`),1)
                 #gapData$`CT`[is.na(gapData$`CT`)] <- 'Undetermined'
@@ -95,6 +98,7 @@ shinyServer(function(input, output) {
                 ntcExtract$GAPDH <- as.numeric(ntcExtract$GAPDH)
                 #combine <- combine %>% filter(`Lab Id` != 'NTC-Extraction',ignore.case = TRUE)
                 combine <- combine %>% filter(!grepl('NTC-Extraction', `Lab Id`,ignore.case = TRUE))
+        
                 
                 #ntcPCR <- combine %>% filter(`Lab Id` == 'NTC-PCR',ignore.case = TRUE)
                 ntcPCR <- combine %>% filter(grepl('NTC-PCR', `Lab Id`,ignore.case = TRUE))
@@ -110,9 +114,30 @@ shinyServer(function(input, output) {
                 pc <- combine %>% filter(grepl('Positive Control', `Lab Id`,ignore.case = TRUE),ignore.case = TRUE)
                 combine <- combine %>% filter(!grepl('Positive Control', `Lab Id`,ignore.case = TRUE),ignore.case = TRUE)
 
+                # Quality PASS/FAIL Test
+                if(ntcExtract$E >= 38.0 & ntcExtract$N >= 38.0 & ntcExtract$RdRp >= 38.0 & ntcExtract$GAPDH >= 38.0) {
+                    ntcExtQC <- c(ntcExtQC, "Pass")
+                } else {
+                    ntcExtQC <- c(ntcExtQC, "Fail")
+                }
+                
+                if(ntcPCR$E >= 38.0 & ntcPCR$N >= 38.0 & ntcPCR$RdRp >= 38.0 & ntcPCR$GAPDH >= 38.0) {
+                    ntcPCRQC <- c(ntcPCRQC, "Pass")
+                } else {
+                    ntcPCRQC <- c(ntcPCRQC, "Fail")
+                }
+                
+                if(pc$E < 38.0 & pc$N < 38.0 & pc$RdRp < 38.0 & pc$GAPDH < 38.0) {
+                    pcQC <- c(pcQC, "Pass")
+                } else {
+                    pcQC <- c(pcQC, "Fail")
+                }
+                
+                
+                
                 qcData <- data.frame('Plate#'=NA, 'Date'=testDate, 'Plate lot #'=NA, 'PCR Instrument #'=NA, 'Lab ID'=labID, 'Non-Template Control-Extraction Lot#'=NA, 
-                    'NTC-Ext_E'=ntcExtract$E, 'NTC-Ext_N'=ntcExtract$N, 'NTC-Ext_RdRp'=ntcExtract$RdRp,'NTC-Ext_GAPDH'=ntcExtract$GAPDH, 'NTC-Ext Quality'=NA,
-                    'Non-Template Control-RT-qPCR Lot#'=NA, 'NTC-PCR_E'=ntcPCR$E, 'NTC-PCR_N'=ntcPCR$N, 'NTC-PCR_RdRp'=ntcPCR$RdRp,'NTC-PCR_GAPDH'=ntcPCR$GAPDH,'NTC-PCR Quality'=NA,
+                    'NTC-Ext_E'=ntcExtract$E, 'NTC-Ext_N'=ntcExtract$N, 'NTC-Ext_RdRp'=ntcExtract$RdRp,'NTC-Ext_GAPDH'=ntcExtract$GAPDH, 'NTC Ext Quality'=NA,
+                    'Non-Template Control-RT-qPCR Lot#'=NA, 'NTC-PCR_E'=ntcPCR$E, 'NTC-PCR_N'=ntcPCR$N, 'NTC-PCR_RdRp'=ntcPCR$RdRp,'NTC-PCR_GAPDH'=ntcPCR$GAPDH,'NTC PCR Quality'=NA,
                     'Positive Control Lot#'=NA, 'PC_E'=pc$E, 'PC_N'=pc$N, 'PC_RdRp'=pc$RdRp,'PC_GAPDH'=pc$GAPDH, 'PC Quality'=NA)
                 
                 names(qcData) <- gsub(".", " ", names(qcData), fixed = TRUE)
@@ -122,7 +147,9 @@ shinyServer(function(input, output) {
                 qc <- rbind(qc, qcData)
 
             }
-            #df <- bind_rows(pcr_data)
+            qc$`NTC Ext Quality` <- ntcExtQC
+            qc$`NTC PCR Quality` <- ntcPCRQC
+            qc$`PC Quality` <- pcQC
             
             res <- cbind('#'=NA, 'Barcodes'=NA,res,"Interpretation"=NA, "Assay"='TrioDx', "Date"=testDate, "Used Extraction Instrument"='KingFisher Flex', "Used PCR Instrument"='QuantStudio6' )
             
