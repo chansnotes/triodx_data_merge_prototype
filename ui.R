@@ -27,15 +27,21 @@ ui <- dashboardPage(
             tabItem(tabName = "cnv_merger",
                     fluidRow(
                         box(
-                            title="File Upload",
-                            fileInput("files", "Choose Files to be Merged", width='80%', multiple=TRUE, accept=c(".xlsx", 'xls')),
-                            downloadButton("download_merged","Download Result"),
-                            verbatimTextOutput("default"),
-                            #verbatimTextOutput("debug"),
-                            #tableOutput('contents'),
+                            title="Step 1. Upload a Barcode scan file",
+                            fileInput("scanFile", "Select a barcode scan file", width='80%', multiple=FALSE, accept=c(".xlsx", '.xls')),
+                            verbatimTextOutput("test"),
                             align='center',
                             width=6
-                        )),
+                        ),
+                        box(
+                            title="Step 2. Upload PCR raw data files",
+                            fileInput("files", "Select Files to be Merged", width='80%', multiple=TRUE, accept=c(".xlsx", '.xls')),
+                            downloadButton("download_merged","Download Result"),
+                            verbatimTextOutput("default"),
+                            align='center',
+                            width=6
+                        )
+                    ),
                     fluidRow(
                         
                         box(

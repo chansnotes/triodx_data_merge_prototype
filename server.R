@@ -152,10 +152,49 @@ shinyServer(function(input, output) {
             qc$`NTC PCR Quality` <- ntcPCRQC
             qc$`PC Quality` <- pcQC
             
-            res <- cbind('#'=NA, 'Barcodes'=NA,res,"Interpretation"=NA, "Assay"='TrioDx', "Date"=testDate, "Used Extraction Instrument"='KingFisher Flex', "Used PCR Instrument"='QuantStudio6' )
             
-            return(list(result = res, qc = qc))
             
+            if(is.null(input$scanFile)) {
+                res <- cbind('#'=NA, 'Barcodes'=NA,res,"Interpretation"=NA, "Assay"='TrioDx', "Date"=testDate, "Used Extraction Instrument"='KingFisher Flex', "Used PCR Instrument"='QuantStudio6' )
+                return(list(result = res, qc = qc))
+                
+            } else {
+                #res <- cbind('#'=NA, 'Barcodes'=NA,res,"Interpretation"=NA, "Assay"='TrioDx', "Date"=testDate, "Used Extraction Instrument"='KingFisher Flex', "Used PCR Instrument"='QuantStudio6' )
+                ff = read_excel(input$scanFile$datapath[1],col_names = TRUE)
+                ff$`#` <- as.integer(ff$`#`) # To remove floating numbers
+                rowNum <- nrow(ff)
+                resFront <- cbind('#'=NA, 'Barcodes'=NA, res)
+                
+                for(i in 1:rowNum) {
+                    if(!is.na(ff$`Lab ID`[i])){
+                        matchedRow <- which(ff$`Lab ID`[i] == resFront$`Lab Id`)
+                        len <- length(matchedRow)
+                        if(len == 1) {
+                            resFront$`#`[matchedRow] <- ff$`#`[i]
+                            resFront$`Barcodes`[matchedRow] <- ff$`Barcodes`[i]
+                        } else if(len > 1) {
+                            for(j in 1:len) {
+                                rr <- matchedRow[j]
+                                resFront$`#`[rr] <- ff$`#`[i]
+                                resFront$`Barcodes`[rr] <- ff$`Barcodes`[i]
+                            }
+                        }
+                    }
+                    else {
+                        # Skip if this field is null or empty
+    
+                    }
+                }
+                data <- cbind(resFront, "Interpretation"=NA, "Assay"='TrioDx', "Date"=testDate, "Used Extraction Instrument"='KingFisher Flex', "Used PCR Instrument"='QuantStudio6')
+                
+                return(list(result = data, qc = qc))
+            }
+            
+            
+            # res <- cbind('#'=NA, 'Barcodes'=NA,res,"Interpretation"=NA, "Assay"='TrioDx', "Date"=testDate, "Used Extraction Instrument"='KingFisher Flex', "Used PCR Instrument"='QuantStudio6' )
+            # 
+            # return(list(result = res, qc = qc))
+            # 
             # GAPDH CT value -> to Numeric
 
         }
@@ -224,6 +263,10 @@ shinyServer(function(input, output) {
             conditionalFormatting(wb, sheet='Result', style=yellowStyle, cols=4:6, rows=1:(nrow(getData()$result)+1), rule="AND(D1<38, D1>0)" )
             conditionalFormatting(wb, sheet='Result', style=redStyle, cols=7, rows=1:(nrow(getData()$result)+1), rule="AND(G1>=38, G1<=45)" )
 
+            #conditionalFormatting(wb, sheet='DAILY QC', style=redStyle, col=11, rows=4:(nrow(getData()$qc)+1), rule='Fail')
+            #conditionalFormatting(wb, sheet='DAILY QC', style=redStyle, col=17, rows=4:(nrow(getData()$qc)+1), rule='Fail')
+            #conditionalFormatting(wb, sheet='DAILY QC', style=redStyle, col=23, rows=4:(nrow(getData()$qc)+1), rule='Fail')
+            
             saveWorkbook(wb, file=file, overwrite=TRUE)
 
             #write.xlsx(getData()$result,file, sheetName='Result', showNA = FALSE, rowNames=FALSE, append = FALSE)
